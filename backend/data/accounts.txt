@@ -2,6 +2,7 @@
 # Format: Role|UserID|Username|PasswordHash|Email|Phone|ExtraData
 
 PASSENGER|1000|ahmed|).5(?>|ahmed@example.com|98765432
+PASSENGER|1000|Myriam|).5(?>|ahmed@example.com|98765432
 PASSENGER|1001|fatima|).5(?>|fatima@example.com|97654321
 PASSENGER|1002|karim|).5(?>|karim@example.com|96543210
 DRIVER|1003|ali_driver|).5(?>|ali@example.com|95432109|DRV001|10
