@@ -188,7 +188,7 @@ void System::saveToFile(const string& filename) {
 
             const ReservationSystem* rs = dest->getReservationSystem();
             if (rs && rs->getQueue()) {
-                queue<Reservation*> tempQueue = rs->getQueue()->queue;
+                queue<Reservation*> tempQueue = rs->getQueue()->reservationsQueue;
                 while (!tempQueue.empty()) {
                     Reservation* res = tempQueue.front();
                     tempQueue.pop();
