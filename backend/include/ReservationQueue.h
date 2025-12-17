@@ -2,7 +2,7 @@
 #define RESERVATIONQUEUE_H
 
 #include <queue>
-#include "reservation.h"
+#include "Reservation.h"
 #include <vector>
 #include <iostream> 
 using namespace std; 
