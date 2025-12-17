@@ -1,0 +1,3 @@
+g++ -std=c++17 -Iinclude -I. src/main.cpp src/System.cpp src/Station.cpp src/Destination.cpp src/Louage.cpp -o server.exe -lws2_32
+
+./server.exe
