@@ -574,16 +574,21 @@ int main() {
     louageSystem.loadFromFile("data/system_data.txt");
     accountManager.loadFromFile("data/accounts.txt");
     
+    // Initialisation réseau Windows seulement
+    #ifdef _WIN32
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        cerr << "Erreur lors de l'initialisation de Winsock." << endl;
+        cerr << "WSAStartup failed" << endl;
         return 1;
     }
+    #endif
     
     SOCKET_TYPE serverSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (serverSocket == INVALID_SOCKET) {
         cerr << "Erreur lors de la creation du socket." << endl;
+        #ifdef _WIN32
         WSACleanup();
+        #endif
         return 1;
     }
     
@@ -595,23 +600,29 @@ int main() {
     if (bind(serverSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
         cerr << "Erreur lors du bind." << endl;
         CLOSE_SOCKET(serverSocket);
+        #ifdef _WIN32
         WSACleanup();
+        #endif
         return 1;
     }
     
     if (listen(serverSocket, SOMAXCONN) == SOCKET_ERROR) {
         cerr << "Erreur lors du listen." << endl;
         CLOSE_SOCKET(serverSocket);
+        #ifdef _WIN32
         WSACleanup();
+        #endif
         return 1;
     }
     
     cout << "Serveur demarre sur le port 8080..." << endl;
+    cout << "Accessible sur: http://0.0.0.0:8080" << endl;
     
     while (true) {
         sockaddr_in clientAddr;
-        int clientAddrSize = sizeof(clientAddr);
+        socklen_t clientAddrSize = sizeof(clientAddr);  // CORRECTION: socklen_t au lieu de int
         SOCKET_TYPE clientSocket = accept(serverSocket, (struct sockaddr*)&clientAddr, &clientAddrSize);
+        
         if (clientSocket == INVALID_SOCKET) {
             cerr << "Erreur lors de l'accept." << endl;
             continue;
@@ -686,27 +697,21 @@ int main() {
             else if (request.find("POST /api/reserve") != string::npos) {
                 response = handleAPIReserve(request);
             }
-
             else if (request.find("GET /my-reservations") != string::npos) {
                 response = handleMyReservationsPage(request);
             }
-            // PROFILE PAGE
             else if (request.find("GET /profile") != string::npos) {
                 response = handleProfilePage(request);
             }
-            // API MY RESERVATIONS
             else if (request.find("GET /api/my-reservations") != string::npos) {
                 response = handleAPIMyReservations(request);
             }
-            // API PAY RESERVATION
             else if (request.find("POST /api/pay-reservation") != string::npos) {
                 response = handleAPIPayReservation(request);
             }
-            // API CANCEL RESERVATION
             else if (request.find("POST /api/cancel-reservation") != string::npos) {
                 response = handleAPICancelReservation(request);
             }
-            // API MY PROFILE
             else if (request.find("GET /api/my-profile") != string::npos) {
                 response = handleAPIMyProfile(request);
             }
@@ -733,6 +738,8 @@ int main() {
     }
     
     CLOSE_SOCKET(serverSocket);
+    #ifdef _WIN32
     WSACleanup();
+    #endif
     return 0;
 }

@@ -5,43 +5,43 @@
 #include <sstream>
 
 void ReservationQueue::addReservation(Reservation* res) {
-    queue.push(res);
+    reservationsQueue.push(res);
 }
 
 Reservation* ReservationQueue::getNextReservation() {
-    if (queue.empty()) {
+    if (reservationsQueue.empty()) {
         return nullptr;
     }
     
-    Reservation* res = queue.front();
-    queue.pop();
+    Reservation* res = reservationsQueue.front();
+    reservationsQueue.pop();
     return res;
 }
 
 Reservation* ReservationQueue::peekNextReservation() const {
-    if (queue.empty()) {
+    if (reservationsQueue.empty()) {
         return nullptr;
     }
-    return queue.front();
+    return reservationsQueue.front();
 }
 
 bool ReservationQueue::isEmpty() const {
-    return queue.empty();
+    return reservationsQueue.empty();
 }
 
 int ReservationQueue::size() const {
-    return (int)queue.size();
+    return (int)reservationsQueue.size();
 }
 
 void ReservationQueue::clear() {
-    while (!queue.empty()) {
-        delete queue.front();
-        queue.pop();
+    while (!reservationsQueue.empty()) {
+        delete reservationsQueue.front();
+        reservationsQueue.pop();
     }
 }
 
 Reservation* ReservationQueue::findReservation(int reservationNumber) const {
-    std::queue<Reservation*> tempQueue = queue;
+    std::queue<Reservation*> tempQueue = reservationsQueue;
     
     while (!tempQueue.empty()) {
         Reservation* res = tempQueue.front();
@@ -57,9 +57,9 @@ bool ReservationQueue::removeReservation(int reservationNumber) {
     bool found = false;
     std::queue<Reservation*> newQueue;
     
-    while (!queue.empty()) {
-        Reservation* res = queue.front();
-        queue.pop();
+    while (!reservationsQueue.empty()) {
+        Reservation* res = reservationsQueue.front();
+        reservationsQueue.pop();
         
         if (res->getNumber() == reservationNumber) {
             delete res;
@@ -69,13 +69,13 @@ bool ReservationQueue::removeReservation(int reservationNumber) {
         }
     }
     
-    queue = newQueue;
+    reservationsQueue = newQueue;
     return found;
 }
 
 std::vector<Reservation*> ReservationQueue::getAllReservations() const {
     std::vector<Reservation*> all;
-    std::queue<Reservation*> temp = queue;
+    std::queue<Reservation*> temp = reservationsQueue;
     
     while (!temp.empty()) {
         all.push_back(temp.front());

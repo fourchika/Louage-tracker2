@@ -9,7 +9,7 @@ using namespace std;
 
 class ReservationQueue {
 public:   
-    queue<Reservation*> queue;
+    queue<Reservation*> reservationsQueue;
     void addReservation(Reservation* res);
     Reservation* getNextReservation();
     Reservation* peekNextReservation() const;
