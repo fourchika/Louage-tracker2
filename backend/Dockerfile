@@ -23,7 +23,7 @@ RUN g++ -o server \
     src/Cashier.cpp \
     src/Manager.cpp \
     src/Admin.cpp \
-    src/Reservation.cpp \
+    src/reservation.cpp \
     src/ReservationQueue.cpp \
     src/ReservationSystem.cpp \
     -Iinclude \
