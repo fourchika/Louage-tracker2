@@ -1,0 +1,12 @@
+# LOUAGE TRACKER - ACCOUNTS DATA
+# Format: Role|UserID|Username|PasswordHash|Email|Phone|ExtraData
+
+PASSENGER|1000|ahmed|).5(?>|ahmed@example.com|98765432
+PASSENGER|1001|fatima|).5(?>|fatima@example.com|97654321
+PASSENGER|1002|karim|).5(?>|karim@example.com|96543210
+DRIVER|1003|ali_driver|).5(?>|ali@example.com|95432109|DRV001|10
+DRIVER|1004|sami_driver|).5(?>|sami@example.com|94321098|DRV002|5
+CASHIER|1005|cashier_tunis|).5(?>|cashier1@example.com|93210987|Tunis
+CASHIER|1006|cashier_sousse|).5(?>|cashier2@example.com|92109876|Sousse
+MANAGER|1007|manager|).5(?>|manager@example.com|91098765
+ADMIN|1008|admin|).5(?>|admin@example.com|90987654|3
