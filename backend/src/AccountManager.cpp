@@ -47,100 +47,106 @@ string AccountManager::trim(const string& str) const {
 // ============================================================
 
 bool AccountManager::registerPassenger(string username, string password, string email, string phone, string fullName) {
-    if (usernameExists(username)) {
-        cout << "✗ Nom d'utilisateur déjà pris" << endl;
+    if (usernameExists(username)) { cout << "✗ Username déjà utilisé" << endl; return false; }
+    if (emailExists(email))       { cout << "✗ Email déjà utilisé"    << endl; return false; }
+
+    string pwd = hashPassword(password);
+    try {
+        pqxx::work txn(Database::get());
+        pqxx::result r = txn.exec_params(
+            "INSERT INTO users (username,password_hash,email,phone,role,full_name) "
+            "VALUES ($1,$2,$3,$4,'PASSENGER',$5) RETURNING id",
+            username, pwd, email, phone, fullName);
+        int newId = r[0]["id"].as<int>();
+        txn.commit();
+        passengers.push_back(new Passenger(newId, username, pwd, email, phone, fullName));
+        if (newId >= nextUserID) nextUserID = newId + 1;
+        cout << "✓ Compte passager créé (ID " << newId << ")" << endl;
+        return true;
+    } catch (const exception& e) {
+        cerr << "✗ DB registerPassenger: " << e.what() << endl;
         return false;
     }
-    
-    if (emailExists(email)) {
-        cout << "✗ Email déjà utilisé" << endl;
-        return false;
-    }
-    
-    string hashedPwd = hashPassword(password);
-    Passenger* newPassenger = new Passenger(nextUserID++, username, hashedPwd, email, phone, fullName);
-    passengers.push_back(newPassenger);
-    
-    cout << "✓ Compte passager créé avec succès!" << endl;
-    cout << "  ID: " << newPassenger->getUserID() << endl;
-    cout << "  Username: " << username << endl;
-    return true;
 }
 
 bool AccountManager::registerDriver(string username, string password, string email, string phone, string license, int experience) {
-    if (usernameExists(username)) {
-        cout << "✗ Nom d'utilisateur déjà pris" << endl;
+    if (usernameExists(username) || emailExists(email)) return false;
+    string pwd = hashPassword(password);
+    try {
+        pqxx::work txn(Database::get());
+        pqxx::result r = txn.exec_params(
+            "INSERT INTO users (username,password_hash,email,phone,role,license_number,experience_years) "
+            "VALUES ($1,$2,$3,$4,'DRIVER',$5,$6) RETURNING id",
+            username, pwd, email, phone, license, experience);
+        int newId = r[0]["id"].as<int>();
+        txn.commit();
+        drivers.push_back(new Driver(newId, username, pwd, email, phone, license, experience));
+        if (newId >= nextUserID) nextUserID = newId + 1;
+        return true;
+    } catch (const exception& e) {
+        cerr << "✗ DB registerDriver: " << e.what() << endl;
         return false;
     }
-    
-    if (emailExists(email)) {
-        cout << "✗ Email déjà utilisé" << endl;
-        return false;
-    }
-    
-    string hashedPwd = hashPassword(password);
-    Driver* newDriver = new Driver(nextUserID++, username, hashedPwd, email, phone, license, experience);
-    drivers.push_back(newDriver);
-    
-    cout << "✓ Compte chauffeur créé avec succès!" << endl;
-    return true;
 }
 
 bool AccountManager::registerCashier(string username, string password, string email, string phone, string station) {
-    if (usernameExists(username)) {
-        cout << "✗ Nom d'utilisateur déjà pris" << endl;
+    if (usernameExists(username) || emailExists(email)) return false;
+    string pwd = hashPassword(password);
+    try {
+        pqxx::work txn(Database::get());
+        pqxx::result r = txn.exec_params(
+            "INSERT INTO users (username,password_hash,email,phone,role,station_name) "
+            "VALUES ($1,$2,$3,$4,'CASHIER',$5) RETURNING id",
+            username, pwd, email, phone, station);
+        int newId = r[0]["id"].as<int>();
+        txn.commit();
+        cashiers.push_back(new Cashier(newId, username, pwd, email, phone, station));
+        if (newId >= nextUserID) nextUserID = newId + 1;
+        return true;
+    } catch (const exception& e) {
+        cerr << "✗ DB registerCashier: " << e.what() << endl;
         return false;
     }
-    
-    if (emailExists(email)) {
-        cout << "✗ Email déjà utilisé" << endl;
-        return false;
-    }
-    
-    string hashedPwd = hashPassword(password);
-    Cashier* newCashier = new Cashier(nextUserID++, username, hashedPwd, email, phone, station);
-    cashiers.push_back(newCashier);
-    
-    cout << "✓ Compte caissier créé avec succès!" << endl;
-    return true;
 }
 
 bool AccountManager::registerManager(string username, string password, string email, string phone) {
-    if (usernameExists(username)) {
-        cout << "✗ Nom d'utilisateur déjà pris" << endl;
+    if (usernameExists(username) || emailExists(email)) return false;
+    string pwd = hashPassword(password);
+    try {
+        pqxx::work txn(Database::get());
+        pqxx::result r = txn.exec_params(
+            "INSERT INTO users (username,password_hash,email,phone,role) "
+            "VALUES ($1,$2,$3,$4,'MANAGER') RETURNING id",
+            username, pwd, email, phone);
+        int newId = r[0]["id"].as<int>();
+        txn.commit();
+        managers.push_back(new Manager(newId, username, pwd, email, phone));
+        if (newId >= nextUserID) nextUserID = newId + 1;
+        return true;
+    } catch (const exception& e) {
+        cerr << "✗ DB registerManager: " << e.what() << endl;
         return false;
     }
-    
-    if (emailExists(email)) {
-        cout << "✗ Email déjà utilisé" << endl;
-        return false;
-    }
-    
-    string hashedPwd = hashPassword(password);
-    Manager* newManager = new Manager(nextUserID++, username, hashedPwd, email, phone);
-    managers.push_back(newManager);
-    
-    cout << "✓ Compte manager créé avec succès!" << endl;
-    return true;
 }
 
 bool AccountManager::registerAdmin(string username, string password, string email, string phone, int permLevel) {
-    if (usernameExists(username)) {
-        cout << "✗ Nom d'utilisateur déjà pris" << endl;
+    if (usernameExists(username) || emailExists(email)) return false;
+    string pwd = hashPassword(password);
+    try {
+        pqxx::work txn(Database::get());
+        pqxx::result r = txn.exec_params(
+            "INSERT INTO users (username,password_hash,email,phone,role,permission_level) "
+            "VALUES ($1,$2,$3,$4,'ADMIN',$5) RETURNING id",
+            username, pwd, email, phone, permLevel);
+        int newId = r[0]["id"].as<int>();
+        txn.commit();
+        admins.push_back(new Admin(newId, username, pwd, email, phone, permLevel));
+        if (newId >= nextUserID) nextUserID = newId + 1;
+        return true;
+    } catch (const exception& e) {
+        cerr << "✗ DB registerAdmin: " << e.what() << endl;
         return false;
     }
-    
-    if (emailExists(email)) {
-        cout << "✗ Email déjà utilisé" << endl;
-        return false;
-    }
-    
-    string hashedPwd = hashPassword(password);
-    Admin* newAdmin = new Admin(nextUserID++, username, hashedPwd, email, phone, permLevel);
-    admins.push_back(newAdmin);
-    
-    cout << "✓ Compte admin créé avec succès!" << endl;
-    return true;
 }
 
 // ============================================================
@@ -284,6 +290,102 @@ User* AccountManager::findUserByUsername(const string& username) const {
         if (a->getUsername() == username) return a;
     }
     return nullptr;
+}
+
+bool AccountManager::deleteAccount(const string& username) {
+    // Search and erase from passengers
+    for (auto it = passengers.begin(); it != passengers.end(); ++it) {
+        if ((*it)->getUsername() == username) {
+            delete *it;
+            passengers.erase(it);
+            try {
+                pqxx::work txn(Database::get());
+                txn.exec_params("DELETE FROM users WHERE username = $1", username);
+                txn.commit();
+            } catch (const exception& e) {
+                cerr << "✗ DB deleteAccount: " << e.what() << endl;
+            }
+            return true;
+        }
+    }
+    // Search and erase from drivers
+    for (auto it = drivers.begin(); it != drivers.end(); ++it) {
+        if ((*it)->getUsername() == username) {
+            delete *it;
+            drivers.erase(it);
+            try {
+                pqxx::work txn(Database::get());
+                txn.exec_params("DELETE FROM users WHERE username = $1", username);
+                txn.commit();
+            } catch (const exception& e) {
+                cerr << "✗ DB deleteAccount: " << e.what() << endl;
+            }
+            return true;
+        }
+    }
+    // Search and erase from cashiers
+    for (auto it = cashiers.begin(); it != cashiers.end(); ++it) {
+        if ((*it)->getUsername() == username) {
+            delete *it;
+            cashiers.erase(it);
+            try {
+                pqxx::work txn(Database::get());
+                txn.exec_params("DELETE FROM users WHERE username = $1", username);
+                txn.commit();
+            } catch (const exception& e) {
+                cerr << "✗ DB deleteAccount: " << e.what() << endl;
+            }
+            return true;
+        }
+    }
+    // Search and erase from managers
+    for (auto it = managers.begin(); it != managers.end(); ++it) {
+        if ((*it)->getUsername() == username) {
+            delete *it;
+            managers.erase(it);
+            try {
+                pqxx::work txn(Database::get());
+                txn.exec_params("DELETE FROM users WHERE username = $1", username);
+                txn.commit();
+            } catch (const exception& e) {
+                cerr << "✗ DB deleteAccount: " << e.what() << endl;
+            }
+            return true;
+        }
+    }
+    // Search and erase from admins
+    for (auto it = admins.begin(); it != admins.end(); ++it) {
+        if ((*it)->getUsername() == username) {
+            delete *it;
+            admins.erase(it);
+            try {
+                pqxx::work txn(Database::get());
+                txn.exec_params("DELETE FROM users WHERE username = $1", username);
+                txn.commit();
+            } catch (const exception& e) {
+                cerr << "✗ DB deleteAccount: " << e.what() << endl;
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+bool AccountManager::changeUserPassword(const string& username, const string& oldPassword, const string& newPassword) {
+    User* user = findUserByUsername(username);
+    if (!user) return false;
+    // User::changePassword expects the stored hash as oldPwd
+    string hashedNew = hashPassword(newPassword);
+    if (!user->changePassword(hashPassword(oldPassword), hashedNew)) return false;
+    try {
+        pqxx::work txn(Database::get());
+        txn.exec_params("UPDATE users SET password_hash=$1 WHERE username=$2",
+                        hashedNew, username);
+        txn.commit();
+    } catch (const exception& e) {
+        cerr << "✗ DB changePassword: " << e.what() << endl;
+    }
+    return true;
 }
 
 // ============================================================
