@@ -1,0 +1,26 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: louage_tracker
+      POSTGRES_USER: louage_user
+      POSTGRES_PASSWORD: louage_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - pgdata:/var/lib/postgresql/data
+
+  server:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://louage_user:louage_pass@db:5432/louage_tracker
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    restart: on-failure
+
+volumes:
+  pgdata:
