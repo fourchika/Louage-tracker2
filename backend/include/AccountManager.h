@@ -54,6 +54,7 @@ public:
     // File Operations
     bool saveToFile(const string& filename) const;
     bool loadFromFile(const string& filename);
+    bool loadFromDB();
     
     // Statistics
     int getTotalUsers() const;

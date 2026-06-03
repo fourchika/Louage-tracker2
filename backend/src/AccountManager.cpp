@@ -5,6 +5,8 @@
 #include <iomanip>
 #include <algorithm>
 #include <openssl/sha.h>
+#include "Database.h"
+#include <pqxx/pqxx>
 
 using namespace std;
 
@@ -407,6 +409,50 @@ bool AccountManager::loadFromFile(const string& filename) {
     file.close();
     cout << "✓ " << loaded << " compte(s) chargé(s) depuis " << filename << endl;
     return true;
+}
+
+bool AccountManager::loadFromDB() {
+    try {
+        pqxx::work txn(Database::get());
+        pqxx::result rows = txn.exec(
+            "SELECT id, username, password_hash, email, phone, role, "
+            "full_name, license_number, experience_years, station_name, permission_level "
+            "FROM users ORDER BY id");
+
+        for (const auto& row : rows) {
+            int    id       = row["id"].as<int>();
+            string username = row["username"].c_str();
+            string pwd      = row["password_hash"].c_str();
+            string email    = row["email"].c_str();
+            string phone    = row["phone"].is_null() ? "" : row["phone"].c_str();
+            string role     = row["role"].c_str();
+
+            if (id >= nextUserID) nextUserID = id + 1;
+
+            if (role == "PASSENGER") {
+                string fn = row["full_name"].is_null() ? "" : row["full_name"].c_str();
+                passengers.push_back(new Passenger(id, username, pwd, email, phone, fn));
+            } else if (role == "DRIVER") {
+                string lic = row["license_number"].is_null() ? "" : row["license_number"].c_str();
+                int    exp = row["experience_years"].is_null() ? 0 : row["experience_years"].as<int>();
+                drivers.push_back(new Driver(id, username, pwd, email, phone, lic, exp));
+            } else if (role == "CASHIER") {
+                string st = row["station_name"].is_null() ? "" : row["station_name"].c_str();
+                cashiers.push_back(new Cashier(id, username, pwd, email, phone, st));
+            } else if (role == "MANAGER") {
+                managers.push_back(new Manager(id, username, pwd, email, phone));
+            } else if (role == "ADMIN") {
+                int perm = row["permission_level"].is_null() ? 3 : row["permission_level"].as<int>();
+                admins.push_back(new Admin(id, username, pwd, email, phone, perm));
+            }
+        }
+        txn.commit();
+        cout << "✓ " << getTotalUsers() << " compte(s) chargé(s) depuis PostgreSQL" << endl;
+        return true;
+    } catch (const exception& e) {
+        cerr << "✗ Erreur loadFromDB (accounts): " << e.what() << endl;
+        return false;
+    }
 }
 
 // ============================================================
