@@ -19,6 +19,8 @@
 #include "../include/AccountManager.h"  // ADD FOR AUTH
 #include "../include/session.h"  // ADD FOR SESSIONS
 #include "html_templates.h"  // ADD FOR HTML GENERATION
+#include "Database.h"
+#include <pqxx/pqxx>
 
 using namespace std;
 
@@ -315,6 +317,20 @@ string handleAPISearch(const string& request) {
            "Access-Control-Allow-Origin: *\r\n"
            "\r\n" + json.str();
 }
+static int getDestinationId(const string& stationName, const string& destName) {
+    try {
+        pqxx::work txn(Database::get());
+        pqxx::result r = txn.exec_params(
+            "SELECT d.id FROM destinations d "
+            "JOIN stations s ON s.id = d.station_id "
+            "WHERE s.name=$1 AND d.name=$2",
+            stationName, destName);
+        txn.commit();
+        if (r.empty()) return -1;
+        return r[0]["id"].as<int>();
+    } catch (...) { return -1; }
+}
+
 string handleAPIReserve(const string& request) {
     Session* session = getAuthenticatedSession(request);
     if (!session) {
@@ -346,6 +362,21 @@ string handleAPIReserve(const string& request) {
     int reservationNumber = station->makeReservation(to, name, true);
     
     if (reservationNumber > 0) {
+        // DB persist
+        int destId = getDestinationId(from, to);
+        if (destId > 0) {
+            try {
+                pqxx::work txn(Database::get());
+                txn.exec_params(
+                    "INSERT INTO reservations "
+                    "(reservation_number, user_id, passenger_name, destination_id, is_paid, times_called) "
+                    "VALUES ($1, COALESCE((SELECT id FROM users WHERE username=$2),0), $3, $4, false, 0)",
+                    reservationNumber, session->username, name, destId);
+                txn.commit();
+            } catch (const exception& e) {
+                cerr << "✗ DB reserve: " << e.what() << endl;
+            }
+        }
         stringstream json;
         json << "{\"success\":true,\"reservationNumber\":" << reservationNumber << "}";
         return "HTTP/1.1 200 OK\r\n"
@@ -444,6 +475,14 @@ string handleAPIPayReservation(const string& request) {
         
         for (auto* dest : station->getDestinations()) {
             if (dest->confirmerPaiement(resNumber)) {
+                try {
+                    pqxx::work txn(Database::get());
+                    txn.exec_params(
+                        "UPDATE reservations SET is_paid=true WHERE reservation_number=$1", resNumber);
+                    txn.commit();
+                } catch (const exception& e) {
+                    cerr << "✗ DB pay: " << e.what() << endl;
+                }
                 return "HTTP/1.1 200 OK\r\n"
                        "Content-Type: application/json\r\n"
                        "\r\n{\"success\":true}";
@@ -484,6 +523,14 @@ string handleAPICancelReservation(const string& request) {
             if (!rs || !rs->getQueue()) continue;
             
             if (rs->getQueue()->removeReservation(resNumber)) {
+                try {
+                    pqxx::work txn(Database::get());
+                    txn.exec_params(
+                        "DELETE FROM reservations WHERE reservation_number=$1", resNumber);
+                    txn.commit();
+                } catch (const exception& e) {
+                    cerr << "✗ DB cancel: " << e.what() << endl;
+                }
                 return "HTTP/1.1 200 OK\r\n"
                        "Content-Type: application/json\r\n"
                        "\r\n{\"success\":true}";
