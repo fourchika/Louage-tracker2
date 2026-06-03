@@ -1,0 +1,16 @@
+# Build artefacts
+backend/*.exe
+backend/server_local.exe
+backend/build_errors.txt
+backend/build/
+
+# Env
+.env
+backend/.env
+
+# Editor
+.vscode/
+*.layout
+
+# Object files
+*.o
