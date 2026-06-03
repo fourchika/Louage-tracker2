@@ -2,7 +2,9 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <iomanip>
 #include <algorithm>
+#include <openssl/sha.h>
 
 using namespace std;
 
@@ -17,14 +19,14 @@ AccountManager::~AccountManager() {
     for (auto* a : admins) delete a;
 }
 
-// Simple hash function (in production, use bcrypt or similar)
 string AccountManager::hashPassword(const string& password) const {
-    // Simple XOR hash for demo - USE PROPER HASHING IN PRODUCTION!
-    string hashed = password;
-    for (size_t i = 0; i < hashed.length(); i++) {
-        hashed[i] = hashed[i] ^ 0x5A; // XOR with key
-    }
-    return hashed;
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256(reinterpret_cast<const unsigned char*>(password.c_str()),
+           password.size(), hash);
+    stringstream ss;
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
+        ss << hex << setw(2) << setfill('0') << static_cast<int>(hash[i]);
+    return ss.str();
 }
 
 bool AccountManager::verifyPassword(const string& password, const string& hash) const {

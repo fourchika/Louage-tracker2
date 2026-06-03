@@ -1,15 +1,20 @@
 #include "../include/User.h"
 #include <iostream>
 #include <regex>
+#include <sstream>
+#include <iomanip>
+#include <openssl/sha.h>
 
 using namespace std;
 
-static string hashPassword(const string& password) {
-    string hashed = password;
-    for (size_t i = 0; i < hashed.length(); i++) {
-        hashed[i] = hashed[i] ^ 0x5A;
-    }
-    return hashed;
+static string sha256Hex(const string& input) {
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256(reinterpret_cast<const unsigned char*>(input.c_str()),
+           input.size(), hash);
+    stringstream ss;
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
+        ss << hex << setw(2) << setfill('0') << static_cast<int>(hash[i]);
+    return ss.str();
 }
 
 User::User(int id, string uname, string pwd, string em, string ph)
@@ -27,13 +32,9 @@ User::User(int id, string uname, string pwd, string em, string ph)
 }
 
 bool User::login(string uname, string pwd) {
-    if (username == uname) {
-        string inputHash = hashPassword(pwd);
-        
-        if (password == inputHash) {
-            cout << "✓ Connexion réussie: " << username << " (" << role << ")" << endl;
-            return true;
-        }
+    if (username == uname && password == sha256Hex(pwd)) {
+        cout << "✓ Connexion réussie: " << username << " (" << role << ")" << endl;
+        return true;
     }
     return false;
 }
