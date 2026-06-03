@@ -1,4 +1,7 @@
 #include "../include/System.h"
+#include "../include/Database.h"
+#include "../include/Reservation.h"
+#include <pqxx/pqxx>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -359,7 +362,7 @@ void System::loadFromFile(const string& filename) {
 
     file.close();
     cout << "\nChargement terminé. " << stations.size() << " station(s) chargée(s)." << endl;
-    
+
     // Debug: Show what was loaded
     cout << "Vérification des stations chargées:" << endl;
     for (const auto* station : stations) {
@@ -369,6 +372,70 @@ void System::loadFromFile(const string& filename) {
         }
     }
     cout << endl;
+}
+
+bool System::loadFromDB() {
+    try {
+        pqxx::work txn(Database::get());
+
+        pqxx::result stRows = txn.exec("SELECT id, name FROM stations ORDER BY id");
+        for (const auto& sRow : stRows) {
+            int    stId   = sRow["id"].as<int>();
+            string stName = sRow["name"].c_str();
+            Station* st   = new Station(stName, stId);
+
+            pqxx::result dRows = txn.exec_params(
+                "SELECT id, name FROM destinations WHERE station_id=$1 ORDER BY id", stId);
+            for (const auto& dRow : dRows) {
+                int    destId   = dRow["id"].as<int>();
+                string destName = dRow["name"].c_str();
+                Destination* dest = new Destination(destName);
+
+                pqxx::result lRows = txn.exec_params(
+                    "SELECT serie_vehicule, numero_louage, id_prop "
+                    "FROM louages WHERE destination_id=$1", destId);
+                for (const auto& lRow : lRows) {
+                    dest->ajouterLouage(Louage(
+                        lRow["serie_vehicule"].as<int>(),
+                        lRow["numero_louage"].as<int>(),
+                        lRow["id_prop"].as<int>(),
+                        destName, stName));
+                }
+
+                pqxx::result rRows = txn.exec_params(
+                    "SELECT reservation_number, user_id, passenger_name, is_paid, times_called "
+                    "FROM reservations WHERE destination_id=$1 ORDER BY reservation_number", destId);
+                for (const auto& rRow : rRows) {
+                    Reservation* res = new Reservation(
+                        rRow["reservation_number"].as<int>(),
+                        rRow["user_id"].as<int>(),
+                        rRow["passenger_name"].c_str(),
+                        destName, stName,
+                        rRow["is_paid"].as<bool>(),
+                        rRow["times_called"].as<int>());
+                    dest->getReservationSystem()->addToQueue(res);
+                }
+
+                st->ajouterDestination(dest);
+            }
+            stations.push_back(st);
+        }
+
+        txn.commit();
+
+        // Set reservation counter above the highest existing number
+        pqxx::work txn2(Database::get());
+        pqxx::result maxRow = txn2.exec(
+            "SELECT COALESCE(MAX(reservation_number),0)+1 AS next FROM reservations");
+        txn2.commit();
+        Reservation::resetCounter(maxRow[0]["next"].as<int>());
+
+        cout << "✓ " << stations.size() << " station(s) chargée(s) depuis PostgreSQL" << endl;
+        return true;
+    } catch (const exception& e) {
+        cerr << "✗ Erreur loadFromDB (system): " << e.what() << endl;
+        return false;
+    }
 }
 
 vector<string> System::getAllStationNames() const {

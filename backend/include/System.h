@@ -36,6 +36,7 @@ public:
 
     void saveToFile(const string& filename);
     void loadFromFile(const string& filename);
+    bool loadFromDB();
 
     vector<string> getAllStationNames() const;
     vector<string> getDestinationsFromStation(const string& stationName) const;
