@@ -87,7 +87,7 @@ Session* getAuthenticatedSession(const string& request) {
     it->second.lastActivity = time(nullptr);
     
     // Check expiry (e.g., 30 min inactivity)
-    if (difftime(it->second.lastActivity, it->second.createdAt) > 1800) {
+    if (difftime(time(nullptr), it->second.lastActivity) > 1800) {
         activeSessions.erase(it);
         return nullptr;
     }
@@ -618,8 +618,14 @@ string handleProfilePage(const string& request) {
 }
 
 int main() {
-    louageSystem.loadFromFile("data/system_data.txt");
-    accountManager.loadFromFile("data/accounts.txt");
+    try {
+        Database::get(); // initialise connection — throws if DATABASE_URL missing
+    } catch (const exception& e) {
+        cerr << "✗ Impossible de connecter à PostgreSQL: " << e.what() << endl;
+        return 1;
+    }
+    louageSystem.loadFromDB();
+    accountManager.loadFromDB();
     
     // Initialisation réseau Windows seulement
     #ifdef _WIN32
@@ -675,8 +681,8 @@ int main() {
             continue;
         }
         
-        char buffer[4096] = {0};
-        int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
+        char buffer[16384] = {0};
+        int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
         if (bytesReceived > 0) {
             string request(buffer, bytesReceived);
             string response;
