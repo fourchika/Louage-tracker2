@@ -645,11 +645,14 @@ int main() {
         return 1;
     }
     
+    const char* portEnv = getenv("PORT");
+    int port = portEnv ? atoi(portEnv) : 8080;
+
     sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_addr.s_addr = INADDR_ANY;
-    serverAddr.sin_port = htons(8080);
-    
+    serverAddr.sin_port = htons(port);
+
     if (bind(serverSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
         cerr << "Erreur lors du bind." << endl;
         CLOSE_SOCKET(serverSocket);
@@ -658,7 +661,7 @@ int main() {
         #endif
         return 1;
     }
-    
+
     if (listen(serverSocket, SOMAXCONN) == SOCKET_ERROR) {
         cerr << "Erreur lors du listen." << endl;
         CLOSE_SOCKET(serverSocket);
@@ -667,9 +670,9 @@ int main() {
         #endif
         return 1;
     }
-    
-    cout << "Serveur demarre sur le port 8080..." << endl;
-    cout << "Accessible sur: http://0.0.0.0:8080" << endl;
+
+    cout << "Serveur demarre sur le port " << port << "..." << endl;
+    cout << "Accessible sur: http://0.0.0.0:" << port << endl;
     
     while (true) {
         sockaddr_in clientAddr;
